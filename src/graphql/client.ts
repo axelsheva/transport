@@ -2,6 +2,7 @@ import { GraphQLRequest, GraphQLResponse } from 'apollo-server-types';
 import { AsyncLocalStorage } from 'async_hooks';
 import { IProducer } from '../transport/types';
 import { minimizeSpaces } from '../utils';
+import { GraphQLError } from '../errors';
 
 export class GraphQLClient {
     constructor(
@@ -29,8 +30,11 @@ export class GraphQLClient {
             return res;
         }
 
-        const schema: GraphQLResponse = JSON.parse(res);
+        const graphqlResponse: GraphQLResponse = JSON.parse(res);
+        if (graphqlResponse.errors) {
+            throw new GraphQLError(graphqlResponse);
+        }
 
-        return schema.data;
+        return graphqlResponse.data;
     }
 }

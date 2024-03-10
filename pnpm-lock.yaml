@@ -11,6 +11,9 @@ dependencies:
   apollo-server:
     specifier: 3.13.0
     version: 3.13.0(graphql@15.8.0)
+  apollo-server-env:
+    specifier: 4.2.1
+    version: 4.2.1
   class-validator:
     specifier: ^0.14.1
     version: 0.14.1
@@ -23,6 +26,9 @@ dependencies:
   type-graphql:
     specifier: ^1.1.1
     version: 1.1.1(class-validator@0.14.1)(graphql@15.8.0)
+  typedi:
+    specifier: ^0.10.0
+    version: 0.10.0
 
 devDependencies:
   '@types/amqplib':
@@ -504,7 +510,7 @@ packages:
   /apollo-server-env@4.2.1:
     resolution: {integrity: sha512-vm/7c7ld+zFMxibzqZ7SSa5tBENc4B0uye9LTfjJwGoQFY5xsUPH5FpO5j0bMUDZ8YYNbrF9SNtzc5Cngcr90g==}
     engines: {node: '>=12.0'}
-    deprecated: The `apollo-server-env` package is part of Apollo Server v2 and v3, which are now deprecated (end-of-life October 22nd 2023 and October 22nd 2024, respectively). This package's functionality is now found in the `@apollo/utils.fetcher` package. See https://www.apollographql.com/docs/apollo-server/previous-versions/ for more details.
+    deprecated: The `apollo-server-env` package is part of Apollo Server v2 and v3, which are now deprecated (end-of-life October 22nd 2023). This package's functionality is now found in the `@apollo/utils.fetcher` package. See https://www.apollographql.com/docs/apollo-server/previous-versions/ for more details.
     dependencies:
       node-fetch: 2.7.0
     transitivePeerDependencies:
@@ -1308,6 +1314,10 @@ packages:
     dependencies:
       media-typer: 0.3.0
       mime-types: 2.1.35
+    dev: false
+
+  /typedi@0.10.0:
+    resolution: {integrity: sha512-v3UJF8xm68BBj6AF4oQML3ikrfK2c9EmZUyLOfShpJuItAqVBHWP/KtpGinkSsIiP6EZyyb6Z3NXyW9dgS9X1w==}
     dev: false
 
   /typescript@5.4.2:

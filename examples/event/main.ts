@@ -1,17 +1,16 @@
 import { connect } from 'amqplib';
 import { ApolloServer } from 'apollo-server';
 import { AsyncLocalStorage } from 'async_hooks';
-import { printSchema } from 'graphql';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { EventConsumer, EventProducer, GraphQLClient, GraphQLServer } from '../../src';
 import { BookResolver } from '../utils/bookResolver';
 import { MOCK_REQUEST_CONTEXT } from '../utils/data';
-import { RequestContext } from '../utils/userContext';
+import { RequestContextStorage, RequestContextType } from '../utils/requestContext';
 
 const EXTERNAL_QUEUE = 'persistent_queue';
 
-const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestContext>) => {
+const makeProducer = async (requestContextStorage: RequestContextStorage) => {
     const connection = await connect('amqp://localhost');
     const channel = await connection.createChannel();
 
@@ -24,7 +23,7 @@ const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestCont
     return graphQLClient;
 };
 
-const makeConsumer = async () => {
+const makeConsumer = async (requestContextStorage: RequestContextStorage) => {
     const connection = await connect('amqp://localhost');
     const channel = await connection.createChannel();
 
@@ -36,21 +35,26 @@ const makeConsumer = async () => {
         resolvers: [BookResolver],
     });
 
-    const sdl = printSchema(schema);
-    console.log(sdl);
+    // const sdl = printSchema(schema);
+    // console.log(sdl);
 
-    const server = new ApolloServer({ schema });
+    const server = new ApolloServer({
+        schema,
+        context: () => {
+            return { requestContextStorage };
+        },
+    });
 
-    const graphQLServer = new GraphQLServer(consumer, server);
+    const graphQLServer = new GraphQLServer(consumer, server, { name: 'Book', version: '0.0.1' });
 
     return graphQLServer;
 };
 
 (async () => {
-    const requestContextStorage = new AsyncLocalStorage<RequestContext>();
+    const requestContextStorage = new AsyncLocalStorage<RequestContextType>();
 
     const producer = await makeProducer(requestContextStorage);
-    await makeConsumer();
+    await makeConsumer(requestContextStorage);
 
     await requestContextStorage.run(MOCK_REQUEST_CONTEXT, async () => {
         await producer.send({

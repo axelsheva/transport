@@ -6,12 +6,12 @@ import { buildSchema } from 'type-graphql';
 import { GraphQLClient, GraphQLServer, RpcConsumer, RpcProducer } from '../../src';
 import { BookResolver } from '../utils/bookResolver';
 import { MOCK_REQUEST_CONTEXT } from '../utils/data';
-import { RequestContext } from '../utils/userContext';
+import { RequestContextStorage, RequestContextType } from '../utils/requestContext';
 
 const INTERNAL_QUEUE = 'sender_queue';
 const EXTERNAL_QUEUE = 'processor_queue';
 
-const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestContext>) => {
+const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
     const connection = await connect('amqp://localhost');
     const channel = await connection.createChannel();
 
@@ -24,7 +24,7 @@ const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestCont
     return graphQLClient;
 };
 
-const makeConsumer = async () => {
+const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
     const connection = await connect('amqp://localhost');
     const channel = await connection.createChannel();
 
@@ -36,29 +36,43 @@ const makeConsumer = async () => {
         resolvers: [BookResolver],
     });
 
-    const server = new ApolloServer({ schema });
+    const server = new ApolloServer({
+        schema,
+        context: () => {
+            return { requestContextStorage };
+        },
+    });
 
-    const graphQLServer = new GraphQLServer(consumer, server);
+    const graphQLServer = new GraphQLServer(
+        consumer,
+        server,
+        { name: 'Book', version: '0.0.1' },
+        requestContextStorage,
+    );
 
     return graphQLServer;
 };
 
 (async () => {
-    const requestContextStorage = new AsyncLocalStorage<RequestContext>();
+    const requestContextStorage = new RequestContextStorage();
 
     const producer = await makeProducer(requestContextStorage);
-    await makeConsumer();
+    await makeConsumer(requestContextStorage);
 
     await requestContextStorage.run(MOCK_REQUEST_CONTEXT, async () => {
-        const res = await producer.send({
-            query: `{
-                    books {
-                        title
-                        author
-                    }
-                }`,
-        });
+        try {
+            const res = await producer.send({
+                query: `{
+                books {
+                    title
+                    author
+                }
+            }`,
+            });
 
-        console.log('response', res);
+            console.log('response', res);
+        } catch (error) {
+            console.error('Something went wrong!', error);
+        }
     });
 })();
