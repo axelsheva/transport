@@ -1,7 +1,7 @@
 import { Channel } from 'amqplib';
-import { IQueue } from './types';
+import { IConsumer } from './types';
 
-export class RequestQueueListener implements IQueue {
+export class RpcConsumer implements IConsumer {
     constructor(
         private readonly channel: Channel,
         private readonly listenQueue: string,
@@ -9,11 +9,7 @@ export class RequestQueueListener implements IQueue {
 
     async connect(): Promise<void> {}
 
-    send(message: string): Promise<any> {
-        throw new Error('Method not implemented.');
-    }
-
-    async receive(onMessage: (message: string) => Promise<any>): Promise<void> {
+    async consume(onMessage: (message: string) => Promise<any>): Promise<void> {
         await this.channel.consume(
             this.listenQueue,
             async (msg) => {

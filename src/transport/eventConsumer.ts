@@ -1,22 +1,19 @@
 import { Channel } from 'amqplib';
-import { IQueue } from './types';
+import { IConsumer } from './types';
 
-export class PersistentQueue implements IQueue {
-    constructor(private readonly channel: Channel, private readonly queue: string) {}
+export class EventConsumer implements IConsumer {
+    constructor(
+        private readonly channel: Channel,
+        private readonly queue: string,
+    ) {}
 
     async connect(): Promise<void> {
         await this.channel.assertQueue(this.queue, {
-            durable: true, // делаем очередь персистентной
+            durable: true,
         });
     }
 
-    async send(message: string): Promise<any> {
-        this.channel.sendToQueue(this.queue, Buffer.from(message), {
-            persistent: true, // делаем сообщения персистентными
-        });
-    }
-
-    async receive(onMessage: (message: string) => Promise<any>): Promise<void> {
+    async consume(onMessage: (message: string) => Promise<any>): Promise<void> {
         await this.channel.consume(
             this.queue,
             async (msg) => {

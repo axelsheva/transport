@@ -1,8 +1,8 @@
 import { Channel } from 'amqplib';
 import { randomUUID } from 'crypto';
-import { IQueue } from './types';
+import { IProducer } from './types';
 
-export class RequestQueueSender implements IQueue {
+export class RpcProducer implements IProducer {
     private readonly pendingRequests: { [correlationId: string]: (reply: string) => void };
 
     constructor(
@@ -49,7 +49,7 @@ export class RequestQueueSender implements IQueue {
         );
     }
 
-    async send(message: string): Promise<any> {
+    async produce(message: string): Promise<any> {
         const correlationId = randomUUID();
 
         return new Promise<any>((resolve, reject) => {
@@ -60,9 +60,5 @@ export class RequestQueueSender implements IQueue {
                 replyTo: this.replyQueue,
             });
         });
-    }
-
-    receive(onMessage: (message: string) => Promise<any>): Promise<void> {
-        throw new Error('Method not implemented.');
     }
 }
