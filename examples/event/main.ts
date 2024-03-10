@@ -20,7 +20,7 @@ const makeProducer = async (requestContextStorage: RequestContextStorage) => {
 
     const graphQLClient = new GraphQLClient(producer, true, requestContextStorage);
 
-    return graphQLClient;
+    return { connection, channel, graphQLClient };
 };
 
 const makeConsumer = async (requestContextStorage: RequestContextStorage) => {
@@ -47,17 +47,17 @@ const makeConsumer = async (requestContextStorage: RequestContextStorage) => {
 
     const graphQLServer = new GraphQLServer(consumer, server, { name: 'Book', version: '0.0.1' });
 
-    return graphQLServer;
+    return { connection, channel, graphQLServer };
 };
 
 (async () => {
     const requestContextStorage = new AsyncLocalStorage<RequestContextType>();
 
     const producer = await makeProducer(requestContextStorage);
-    await makeConsumer(requestContextStorage);
+    const consumer = await makeConsumer(requestContextStorage);
 
     await requestContextStorage.run(MOCK_REQUEST_CONTEXT, async () => {
-        await producer.send({
+        await producer.graphQLClient.send({
             query: `mutation CreateBook($title: String!, $author: String!) {
                 book(title: $title, author: $author) {
                     title
@@ -69,5 +69,10 @@ const makeConsumer = async (requestContextStorage: RequestContextStorage) => {
                 author: 'F. Scott Fitzgerald',
             },
         });
+
+        await producer.channel.close();
+        await producer.connection.close();
+        await consumer.channel.close();
+        await consumer.connection.close();
     });
 })();

@@ -21,7 +21,7 @@ const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestCont
 
     const graphQLClient = new GraphQLClient(producer, true, requestContextStorage);
 
-    return graphQLClient;
+    return { connection, channel, graphQLClient };
 };
 
 const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
@@ -50,18 +50,18 @@ const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestCont
         requestContextStorage,
     );
 
-    return graphQLServer;
+    return { connection, channel, graphQLServer };
 };
 
 (async () => {
     const requestContextStorage = new RequestContextStorage();
 
     const producer = await makeProducer(requestContextStorage);
-    await makeConsumer(requestContextStorage);
+    const consumer = await makeConsumer(requestContextStorage);
 
     await requestContextStorage.run(MOCK_REQUEST_CONTEXT, async () => {
         try {
-            const res = await producer.send({
+            const res = await producer.graphQLClient.send({
                 query: `{
                 books {
                     title
@@ -73,6 +73,11 @@ const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestCont
             console.log('response', res);
         } catch (error) {
             console.error('Something went wrong!', error);
+        } finally {
+            await producer.channel.close();
+            await producer.connection.close();
+            await consumer.channel.close();
+            await consumer.connection.close();
         }
     });
 })();
