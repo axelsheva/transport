@@ -31,6 +31,9 @@ export class GraphQLClient {
         }
 
         const graphqlResponse: GraphQLResponse = JSON.parse(res);
+
+        console.log(graphqlResponse.extensions);
+
         if (graphqlResponse.errors) {
             throw new GraphQLError(graphqlResponse);
         }

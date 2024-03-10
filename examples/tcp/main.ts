@@ -1,36 +1,27 @@
-import { connect } from 'amqplib';
 import { ApolloServer } from 'apollo-server';
 import { AsyncLocalStorage } from 'async_hooks';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
-import { GraphQLClient, GraphQLServer, RpcConsumer, RpcProducer } from '../../src';
-import { CONFIG } from '../config';
+import { GraphQLClient, GraphQLServer } from '../../src';
+import { TcpProducer } from '../../src/tcp/client';
+import { TcpConsumer } from '../../src/tcp/server';
 import { BookResolver } from '../utils/bookResolver';
 import { MOCK_REQUEST_CONTEXT } from '../utils/data';
 import { delay } from '../utils/delay';
 import { RequestContextStorage, RequestContextType } from '../utils/requestContext';
 
-const INTERNAL_QUEUE = 'sender_queue';
-const EXTERNAL_QUEUE = 'processor_queue';
-
 const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
-    const connection = await connect(CONFIG.amqp.url);
-    const channel = await connection.createConfirmChannel();
-
-    const producer = new RpcProducer(channel, EXTERNAL_QUEUE, INTERNAL_QUEUE);
+    const producer = new TcpProducer('localhost', 3000);
 
     await producer.connect();
 
     const graphQLClient = new GraphQLClient(producer, true, requestContextStorage);
 
-    return { connection, channel, graphQLClient };
+    return { graphQLClient };
 };
 
 const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
-    const connection = await connect(CONFIG.amqp.url);
-    const channel = await connection.createConfirmChannel();
-
-    const consumer = new RpcConsumer(channel, EXTERNAL_QUEUE);
+    const consumer = new TcpConsumer(3000);
 
     await consumer.connect();
 
@@ -52,14 +43,14 @@ const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestCont
         requestContextStorage,
     );
 
-    return { connection, channel, graphQLServer };
+    return { graphQLServer };
 };
 
 (async () => {
     const requestContextStorage = new RequestContextStorage();
 
-    const producer = await makeProducer(requestContextStorage);
     const consumer = await makeConsumer(requestContextStorage);
+    const producer = await makeProducer(requestContextStorage);
 
     await requestContextStorage.run(MOCK_REQUEST_CONTEXT, async () => {
         while (1) {
@@ -76,11 +67,6 @@ const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestCont
                 console.log('response', res);
             } catch (error) {
                 console.error('Something went wrong!', error);
-            } finally {
-                // await producer.channel.close();
-                // await producer.connection.close();
-                // await consumer.channel.close();
-                // await consumer.connection.close();
             }
 
             await delay(1000);
