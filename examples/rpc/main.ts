@@ -7,12 +7,13 @@ import { GraphQLClient, GraphQLServer, RpcConsumer, RpcProducer } from '../../sr
 import { BookResolver } from '../utils/bookResolver';
 import { MOCK_REQUEST_CONTEXT } from '../utils/data';
 import { RequestContextStorage, RequestContextType } from '../utils/requestContext';
+import { CONFIG } from '../config';
 
 const INTERNAL_QUEUE = 'sender_queue';
 const EXTERNAL_QUEUE = 'processor_queue';
 
 const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
-    const connection = await connect('amqp://localhost');
+    const connection = await connect(CONFIG.amqp.url);
     const channel = await connection.createConfirmChannel();
 
     const producer = new RpcProducer(channel, EXTERNAL_QUEUE, INTERNAL_QUEUE);
@@ -25,7 +26,7 @@ const makeProducer = async (requestContextStorage: AsyncLocalStorage<RequestCont
 };
 
 const makeConsumer = async (requestContextStorage: AsyncLocalStorage<RequestContextType>) => {
-    const connection = await connect('amqp://localhost');
+    const connection = await connect(CONFIG.amqp.url);
     const channel = await connection.createConfirmChannel();
 
     const consumer = new RpcConsumer(channel, EXTERNAL_QUEUE);

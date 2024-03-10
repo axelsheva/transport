@@ -7,11 +7,12 @@ import { EventConsumer, EventProducer, GraphQLClient, GraphQLServer } from '../.
 import { BookResolver } from '../utils/bookResolver';
 import { MOCK_REQUEST_CONTEXT } from '../utils/data';
 import { RequestContextStorage, RequestContextType } from '../utils/requestContext';
+import { CONFIG } from '../config';
 
 const EXTERNAL_QUEUE = 'persistent_queue';
 
 const makeProducer = async (requestContextStorage: RequestContextStorage) => {
-    const connection = await connect('amqp://localhost');
+    const connection = await connect(CONFIG.amqp.url);
     const channel = await connection.createConfirmChannel();
 
     const producer = new EventProducer(channel, EXTERNAL_QUEUE);
@@ -24,7 +25,7 @@ const makeProducer = async (requestContextStorage: RequestContextStorage) => {
 };
 
 const makeConsumer = async (requestContextStorage: RequestContextStorage) => {
-    const connection = await connect('amqp://localhost');
+    const connection = await connect(CONFIG.amqp.url);
     const channel = await connection.createConfirmChannel();
 
     const consumer = new EventConsumer(channel, EXTERNAL_QUEUE);
