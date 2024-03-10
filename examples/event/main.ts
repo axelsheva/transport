@@ -12,7 +12,7 @@ const EXTERNAL_QUEUE = 'persistent_queue';
 
 const makeProducer = async (requestContextStorage: RequestContextStorage) => {
     const connection = await connect('amqp://localhost');
-    const channel = await connection.createChannel();
+    const channel = await connection.createConfirmChannel();
 
     const producer = new EventProducer(channel, EXTERNAL_QUEUE);
 
@@ -25,7 +25,7 @@ const makeProducer = async (requestContextStorage: RequestContextStorage) => {
 
 const makeConsumer = async (requestContextStorage: RequestContextStorage) => {
     const connection = await connect('amqp://localhost');
-    const channel = await connection.createChannel();
+    const channel = await connection.createConfirmChannel();
 
     const consumer = new EventConsumer(channel, EXTERNAL_QUEUE);
 

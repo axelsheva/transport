@@ -1,12 +1,13 @@
-import { Channel } from 'amqplib';
+import { ConfirmChannel } from 'amqplib';
 import { randomUUID } from 'crypto';
+import { TransportError, TransportProduceRequestTimeoutError } from '../errors';
 import { IProducer } from './types';
 
 export class RpcProducer implements IProducer {
     private readonly pendingRequests: { [correlationId: string]: (reply: string) => void };
 
     constructor(
-        private readonly channel: Channel,
+        private readonly channel: ConfirmChannel,
         private readonly sendQueue: string,
         private readonly replyQueue: string,
     ) {
@@ -24,8 +25,9 @@ export class RpcProducer implements IProducer {
         const resolve = this.pendingRequests[correlationId];
         if (resolve) {
             resolve(replyContent);
-            // Удаление использованной функции resolve из хранилища
             delete this.pendingRequests[correlationId];
+        } else {
+            throw new TransportError(`Pending request ${correlationId} not found`);
         }
     }
 
@@ -37,28 +39,45 @@ export class RpcProducer implements IProducer {
                     return;
                 }
 
-                // Обработка полученного сообщения
                 const correlationId = msg.properties.correlationId;
                 const replyContent = msg.content.toString();
                 this.handleReply(correlationId, replyContent);
 
-                // Подтверждение обработки сообщения
                 this.channel.ack(msg);
             },
             { noAck: false },
         );
     }
 
-    async produce(message: string): Promise<any> {
+    async produce(message: string, timeout: number = 5000): Promise<string> {
         const correlationId = randomUUID();
 
-        return new Promise<any>((resolve, reject) => {
-            this.pendingRequests[correlationId] = resolve;
+        return new Promise<string>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                delete this.pendingRequests[correlationId];
+                reject(new TransportProduceRequestTimeoutError('RPC request timed out'));
+            }, timeout);
 
-            this.channel.sendToQueue(this.sendQueue, Buffer.from(message), {
-                correlationId: correlationId,
-                replyTo: this.replyQueue,
-            });
+            this.pendingRequests[correlationId] = (reply) => {
+                clearTimeout(timeoutId);
+                resolve(reply);
+            };
+
+            this.channel.sendToQueue(
+                this.sendQueue,
+                Buffer.from(message),
+                {
+                    correlationId: correlationId,
+                    replyTo: this.replyQueue,
+                },
+                (err, ok) => {
+                    if (err !== null) {
+                        clearTimeout(timeoutId);
+                        delete this.pendingRequests[correlationId];
+                        reject(err);
+                    }
+                },
+            );
         });
     }
 }

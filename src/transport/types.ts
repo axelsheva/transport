@@ -1,6 +1,6 @@
 export interface IProducer {
     connect(): Promise<void>;
-    produce(message: string): Promise<any>;
+    produce(message: string, timeout: number): Promise<string | void>;
 }
 
 export interface IConsumer {

@@ -1,9 +1,10 @@
-import { Channel } from 'amqplib';
+import { ConfirmChannel } from 'amqplib';
+import { TransportProduceRequestTimeoutError } from '../errors';
 import { IProducer } from './types';
 
 export class EventProducer implements IProducer {
     constructor(
-        private readonly channel: Channel,
+        private readonly channel: ConfirmChannel,
         private readonly queue: string,
     ) {}
 
@@ -13,9 +14,27 @@ export class EventProducer implements IProducer {
         });
     }
 
-    async produce(message: string): Promise<any> {
-        this.channel.sendToQueue(this.queue, Buffer.from(message), {
-            persistent: true,
+    async produce(message: string, timeout: number = 5000): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new TransportProduceRequestTimeoutError('RPC request timed out'));
+            }, timeout);
+
+            this.channel.sendToQueue(
+                this.queue,
+                Buffer.from(message),
+                {
+                    persistent: true,
+                },
+                (err, ok) => {
+                    clearTimeout(timeoutId);
+                    if (err !== null) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                },
+            );
         });
     }
 }

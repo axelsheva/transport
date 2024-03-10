@@ -1,8 +1,8 @@
 import { GraphQLRequest, GraphQLResponse } from 'apollo-server-types';
 import { AsyncLocalStorage } from 'async_hooks';
+import { GraphQLError } from '../errors';
 import { IProducer } from '../transport/types';
 import { minimizeSpaces } from '../utils';
-import { GraphQLError } from '../errors';
 
 export class GraphQLClient {
     constructor(
@@ -25,7 +25,7 @@ export class GraphQLClient {
             request.query = minimizeSpaces(request.query);
         }
 
-        const res = await this.producer.produce(JSON.stringify(request));
+        const res = await this.producer.produce(JSON.stringify(request), 5_000);
         if (!res) {
             return res;
         }

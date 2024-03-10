@@ -1,13 +1,17 @@
 import { Args, Mutation, Query, Resolver } from 'type-graphql';
 import { BOOKS } from './data';
 import { Book, CreateBookArgs } from './gql';
-import { RequestContext, RequestContextType } from './requestContext';
+import { User, UserContext } from './requestContext';
 
 @Resolver(Book)
 export class BookResolver {
     @Query(() => [Book])
-    books(@RequestContext() context: RequestContextType): Array<Book> {
-        console.log(`[BookResolver][books] user: ${context.user.id}`);
+    books(@UserContext() user?: User): Array<Book> {
+        if (user) {
+            console.log(`[BookResolver][books] user: ${user.id}`);
+        } else {
+            console.log(`[BookResolver][books] user is missing`);
+        }
 
         return BOOKS;
     }

@@ -12,3 +12,7 @@ export class GraphQLError extends Error implements GraphQLResponse {
         this.extensions = graphQLResponse.extensions;
     }
 }
+
+export class TransportError extends Error {}
+
+export class TransportProduceRequestTimeoutError extends TransportError {}
